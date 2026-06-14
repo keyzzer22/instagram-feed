@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instagram Grid Preview</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px 48px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .app-title {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: #888;
+      margin-bottom: 16px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* ── Instagram card ── */
+    :root {
+      --ig-bg: #fafafa;
+      --ig-surface: #fff;
+      --ig-border: #dbdbdb;
+      --ig-text: #262626;
+      --ig-muted: #8e8e8e;
+      --ig-cell-bg: #efefef;
+      --ig-overlay: rgba(0,0,0,0.4);
+    }
+    .ig-dark {
+      --ig-bg: #000;
+      --ig-surface: #121212;
+      --ig-border: #262626;
+      --ig-text: #f5f5f5;
+      --ig-muted: #a8a8a8;
+      --ig-cell-bg: #1c1c1c;
+      --ig-overlay: rgba(0,0,0,0.6);
+    }
+
+    .ig-wrap {
+      background: var(--ig-bg);
+      border-radius: 12px;
+      border: 1px solid #d0d0d0;
+      overflow: hidden;
+      transition: background 0.2s;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .ig-topbar {
+      background: var(--ig-surface);
+      border-bottom: 1px solid var(--ig-border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ig-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .ig-avatar i { color: #fff; font-size: 18px; }
+    .ig-username {
+      font-size: 14px; font-weight: 600; color: var(--ig-text);
+      outline: none; border-bottom: 1px solid transparent;
+    }
+    .ig-username:focus { border-bottom-color: var(--ig-muted); }
+    .ig-topbar-actions { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+    .ig-icon-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--ig-text); padding: 7px; border-radius: 8px;
+      display: flex; align-items: center; font-size: 20px;
+      transition: background 0.15s;
+    }
+    .ig-icon-btn:hover { background: var(--ig-cell-bg); }
+
+    /* ── Tabs ── */
+    .ig-tabs {
+      display: flex; background: var(--ig-surface);
+      border-bottom: 1px solid var(--ig-border);
+    }
+    .ig-tab {
+      flex: 1; padding: 11px; text-align: center;
+      font-size: 12px; color: var(--ig-muted); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      transition: color 0.15s;
+      text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500;
+    }
+    .ig-tab i { font-size: 16px; }
+    .ig-tab.active { color: var(--ig-text); border-bottom-color: var(--ig-text); }
+
+    /* ── Panels ── */
+    .ig-panel { display: none; }
+    .ig-panel.active { display: block; }
+
+    /* ── Grid ── */
+    .ig-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+      background: var(--ig-border);
+    }
+    .ig-cell {
+      aspect-ratio: 1; background: var(--ig-cell-bg);
+      position: relative; overflow: hidden; cursor: pointer;
+    }
+    .ig-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ig-cell.empty {
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 4px;
+    }
+    .ig-cell.empty i { font-size: 22px; color: var(--ig-muted); }
+    .ig-cell.drag-over { outline: 2px dashed #0095f6; outline-offset: -2px; }
+    .ig-cell.dragging { opacity: 0.35; }
+    .ig-cell-overlay {
+      position: absolute; inset: 0; background: var(--ig-overlay);
+      display: none; align-items: center; justify-content: center;
+      gap: 18px; color: #fff; font-size: 14px; font-weight: 600;
+    }
+    .ig-cell:hover .ig-cell-overlay { display: flex; }
+    .ig-cell-overlay span { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .ig-cell-overlay i { font-size: 18px; }
+    .ig-new-badge {
+      position: absolute; top: 5px; left: 5px;
+      background: #0095f6; color: #fff;
+      font-size: 9px; font-weight: 700; padding: 2px 6px;
+      border-radius: 4px; letter-spacing: 0.04em; pointer-events: none;
+    }
+    .ig-status-badge {
+      position: absolute; bottom: 5px; right: 5px;
+      font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+      pointer-events: none;
+    }
+    .ig-status-published { background: #23af5e; color: #fff; }
+    .ig-status-scheduled  { background: #0095f6; color: #fff; }
+    .ig-status-draft      { background: rgba(0,0,0,0.55); color: #fff; }
+    .ig-caption {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.72));
+      padding: 18px 6px 5px; color: #fff; font-size: 10px; line-height: 1.35;
+      display: none;
+    }
+    .ig-cell:hover .ig-caption { display: block; }
+
+    /* ── Actions bar ── */
+    .ig-actions-bar {
+      background: var(--ig-surface); border-top: 1px solid var(--ig-border);
+      padding: 10px 12px; display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .ig-btn {
+      padding: 7px 13px; border-radius: 8px;
+      border: 1px solid var(--ig-border);
+      background: var(--ig-surface); color: var(--ig-text);
+      font-size: 12px; font-weight: 500; cursor: pointer;
+      display: flex; align-items: center; gap: 5px;
+      transition: background 0.15s;
+    }
+    .ig-btn:hover { background: var(--ig-cell-bg); }
+    .ig-btn-primary { background: #0095f6; border-color: #0095f6; color: #fff; }
+    .ig-btn-primary:hover { background: #1aa3ff; }
+
+    /* ── Queue ── */
+    .ig-queue-section {
+      padding: 12px 14px; background: var(--ig-bg);
+      border-top: 1px solid var(--ig-border);
+    }
+    .ig-queue-label {
+      font-size: 10px; font-weight: 600; color: var(--ig-muted);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+    }
+    .ig-queue { display: flex; gap: 6px; flex-wrap: wrap; }
+    .ig-queue-empty { font-size: 12px; color: var(--ig-muted); }
+    .ig-queue-item {
+      width: 52px; height: 52px; border-radius: 8px; overflow: hidden;
+      border: 1px solid var(--ig-border); position: relative;
+    }
+    .ig-queue-item img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ── Notion panel ── */
+    .notion-panel { padding: 16px; background: var(--ig-bg); }
+    .notion-section { margin-bottom: 1.1rem; }
+    .notion-label {
+      font-size: 10px; font-weight: 600; color: var(--ig-muted);
+      margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em;
+      display: block;
+    }
+    .notion-input {
+      width: 100%; padding: 9px 12px; border-radius: 8px;
+      border: 1px solid var(--ig-border);
+      background: var(--ig-surface); color: var(--ig-text);
+      font-size: 13px; font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .notion-input:focus { outline: none; border-color: #0095f6; }
+    .notion-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .notion-field-label { font-size: 11px; color: var(--ig-muted); margin-bottom: 4px; }
+    .notion-status {
+      background: var(--ig-cell-bg); border-radius: 8px;
+      padding: 10px 12px; font-size: 13px; color: var(--ig-muted);
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    }
+    .notion-status.ok  { color: #23af5e; background: rgba(35,175,94,0.08); }
+    .notion-status.err { color: #ed4956; background: rgba(237,73,86,0.08); }
+    .notion-hint { font-size: 11px; color: var(--ig-muted); margin-top: 4px; line-height: 1.5; }
+    .notion-row { display: flex; gap: 8px; }
+    .notion-divider { border: none; border-top: 1px solid var(--ig-border); margin: 14px 0; }
+
+    /* ── Upload panel ── */
+    .upload-panel { padding: 16px; background: var(--ig-bg); }
+    .upload-drop {
+      border: 2px dashed var(--ig-border); border-radius: 10px;
+      padding: 28px 20px; text-align: center; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      margin-bottom: 14px;
+    }
+    .upload-drop:hover, .upload-drop.dragover {
+      border-color: #0095f6; background: rgba(0,149,246,0.04);
+    }
+    .upload-drop i { font-size: 28px; color: var(--ig-muted); display: block; margin-bottom: 8px; }
+    .upload-drop p { font-size: 13px; color: var(--ig-muted); }
+    .upload-drop strong { color: #0095f6; }
+
+    /* ── Proxy config banner ── */
+    .proxy-banner {
+      background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 16px; font-size: 12px;
+      color: #795548; line-height: 1.6; display: none;
+    }
+    .proxy-banner.show { display: block; }
+    .proxy-banner strong { color: #5d4037; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <div class="app-title">Instagram Grid Preview</div>
+
+  <!-- Proxy not configured warning -->
+  <div class="proxy-banner" id="proxyBanner">
+    <strong>⚠ Proxy no configurado.</strong> Abrí este archivo en un editor de texto, buscá la línea <code>const PROXY_URL</code> y reemplazá el valor por la URL de tu Cloudflare Worker.
+  </div>
+
+  <div class="ig-wrap" id="igWrap">
+
+    <!-- Topbar -->
+    <div class="ig-topbar">
+      <div class="ig-avatar"><i class="ti ti-brand-instagram"></i></div>
+      <div>
+        <div class="ig-username" id="igUsername" contenteditable="true" spellcheck="false">tu_cuenta</div>
+      </div>
+      <div class="ig-topbar-actions">
+        <button class="ig-icon-btn" id="darkToggle" title="Modo claro / oscuro" onclick="toggleDark()">
+          <i class="ti ti-moon" id="darkIcon"></i>
+        </button>
+        <button class="ig-icon-btn" title="Subir imágenes" onclick="document.getElementById('fileInput').click()">
+          <i class="ti ti-plus-square"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="ig-tabs">
+      <div class="ig-tab active" onclick="switchTab('grid', this)">
+        <i class="ti ti-layout-grid"></i> Grid
+      </div>
+      <div class="ig-tab" onclick="switchTab('notion', this)">
+        <i class="ti ti-database"></i> Notion
+      </div>
+      <div class="ig-tab" onclick="switchTab('upload', this)">
+        <i class="ti ti-upload"></i> Subir
+      </div>
+    </div>
+
+    <!-- Panel: Grid -->
+    <div class="ig-panel active" id="panel-grid">
+      <div class="ig-grid" id="igGrid"></div>
+      <div class="ig-queue-section">
+        <div class="ig-queue-label">Próximas a publicar</div>
+        <div class="ig-queue" id="igQueue">
+          <span class="ig-queue-empty">Marcá una foto con ★ para verla acá</span>
+        </div>
+      </div>
+      <div class="ig-actions-bar">
+        <button class="ig-btn" onclick="addRow()">
+          <i class="ti ti-plus"></i> Agregar fila
+        </button>
+        <button class="ig-btn" onclick="clearAll()">
+          <i class="ti ti-trash"></i> Limpiar
+        </button>
+      </div>
+    </div>
+
+    <!-- Panel: Notion -->
+    <div class="ig-panel" id="panel-notion">
+      <div class="notion-panel">
+        <div class="notion-section">
+          <label class="notion-label" for="notionToken">Integration Token</label>
+          <input class="notion-input" type="password" id="notionToken"
+            placeholder="secret_xxxxxxxxxxxxxxxx" autocomplete="off"
+            oninput="clearNotionStatus()" />
+          <p class="notion-hint">Crealo en notion.so/profile/integrations → New integration</p>
+        </div>
+
+        <div class="notion-section">
+          <label class="notion-label" for="notionDbId">Database ID</label>
+          <input class="notion-input" type="text" id="notionDbId"
+            placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            oninput="clearNotionStatus()" />
+          <p class="notion-hint">
+            En la URL de tu base: notion.so/workspace/<strong>este-id</strong>?v=...
+          </p>
+        </div>
+
+        <hr class="notion-divider" />
+
+        <div class="notion-section">
+          <label class="notion-label">Nombres de los campos en tu base</label>
+          <div class="notion-fields-grid">
+            <div>
+              <p class="notion-field-label">Imagen (Files o URL)</p>
+              <input class="notion-input" type="text" id="fldImage" placeholder="Imagen" />
+            </div>
+            <div>
+              <p class="notion-field-label">Título / Caption</p>
+              <input class="notion-input" type="text" id="fldCaption" placeholder="Caption" />
+            </div>
+            <div>
+              <p class="notion-field-label">Estado</p>
+              <input class="notion-input" type="text" id="fldStatus" placeholder="Estado" />
+            </div>
+            <div>
+              <p class="notion-field-label">Fecha de publicación</p>
+              <input class="notion-input" type="text" id="fldDate" placeholder="Fecha" />
+            </div>
+          </div>
+        </div>
+
+        <div class="notion-status" id="notionStatus">
+          <i class="ti ti-database-off"></i> Sin conectar
+        </div>
+
+        <div class="notion-row">
+          <button class="ig-btn ig-btn-primary" onclick="loadFromNotion()" style="flex:1; justify-content:center;">
+            <i class="ti ti-plug"></i> Conectar y cargar
+          </button>
+          <button class="ig-btn" onclick="saveCredentials()" title="Guardar credenciales en este navegador">
+            <i class="ti ti-device-floppy"></i>
+          </button>
+        </div>
+        <p class="notion-hint" style="margin-top:8px; text-align:center;">
+          Las credenciales se guardan solo en tu navegador (localStorage).
+        </p>
+      </div>
+    </div>
+
+    <!-- Panel: Upload -->
+    <div class="ig-panel" id="panel-upload">
+      <div class="upload-panel">
+        <div class="upload-drop" id="dropZone"
+          onclick="document.getElementById('fileInput').click()"
+          ondragover="event.preventDefault(); this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="handleDrop(event)">
+          <i class="ti ti-photo-up"></i>
+          <p><strong>Hacé clic</strong> o arrastrá imágenes acá</p>
+        </div>
+        <div class="notion-section">
+          <label class="notion-label" for="urlInput">Pegar URL de imagen</label>
+          <div class="notion-row">
+            <input class="notion-input" type="text" id="urlInput"
+              placeholder="https://..."
+              style="flex:1"
+              onkeydown="if(event.key==='Enter') addFromUrl()" />
+            <button class="ig-btn ig-btn-primary" onclick="addFromUrl()">
+              <i class="ti ti-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.ig-wrap -->
+</div><!-- /.app -->
+
+<input type="file" id="fileInput" accept="image/*" multiple
+  onchange="handleFiles(this.files)" style="display:none" />
+
+<script>
+  /* ─── CONFIGURACIÓN ───────────────────────────────────────────────────
+     Reemplazá esta URL por la de tu Cloudflare Worker después de deployarlo.
+     Ejemplo: 'https://mi-proxy.mi-usuario.workers.dev'
+  ──────────────────────────────────────────────────────────────────────── */
+  const PROXY_URL = 'https://notion-proxy-workerjs.keyzzer22.workers.dev';
+
+  /* ─── Estado ─────────────────────────────────────────────────────────── */
+  let isDark = false;
+  let cells = Array(12).fill(null);
+  let meta = Array(12).fill(null);
+  let newFlags = Array(12).fill(false);
+  let dragSrc = null;
+
+  /* ─── Init ───────────────────────────────────────────────────────────── */
+  (function init() {
+    if (PROXY_URL === 'TU_CLOUDFLARE_WORKER_URL_AQUI') {
+      document.getElementById('proxyBanner').classList.add('show');
+    }
+    const saved = localStorage.getItem('ig_credentials');
+    if (saved) {
+      try {
+        const c = JSON.parse(saved);
+        if (c.token) document.getElementById('notionToken').value = c.token;
+        if (c.dbId)  document.getElementById('notionDbId').value  = c.dbId;
+        if (c.fImg)  document.getElementById('fldImage').value    = c.fImg;
+        if (c.fCap)  document.getElementById('fldCaption').value  = c.fCap;
+        if (c.fStat) document.getElementById('fldStatus').value   = c.fStat;
+        if (c.fDate) document.getElementById('fldDate').value     = c.fDate;
+      } catch(e) {}
+    }
+    render();
+    renderQueue();
+  })();
+
+  /* ─── Dark mode ──────────────────────────────────────────────────────── */
+  function toggleDark() {
+    isDark = !isDark;
+    document.getElementById('igWrap').classList.toggle('ig-dark', isDark);
+    document.getElementById('darkIcon').className = isDark ? 'ti ti-sun' : 'ti ti-moon';
+  }
+
+  /* ─── Tabs ───────────────────────────────────────────────────────────── */
+  function switchTab(name, el) {
+    document.querySelectorAll('.ig-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.ig-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    el.classList.add('active');
+  }
+
+  /* ─── Render grid ────────────────────────────────────────────────────── */
+  function render() {
+    const grid = document.getElementById('igGrid');
+    grid.innerHTML = '';
+    cells.forEach((src, i) => {
+      const div = document.createElement('div');
+      div.className = 'ig-cell' + (src ? '' : ' empty');
+      div.dataset.index = i;
+      div.draggable = !!src;
+
+      if (src) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = 'foto ' + (i + 1);
+        img.onerror = () => {
+          img.style.display = 'none';
+          div.style.background = 'var(--ig-cell-bg)';
+        };
+        div.appendChild(img);
+
+        if (newFlags[i]) {
+          const b = document.createElement('div');
+          b.className = 'ig-new-badge';
+          b.textContent = 'Nueva';
+          div.appendChild(b);
+        }
+
+        const m = meta[i];
+        if (m) {
+          if (m.status) {
+            const sl = m.status.toLowerCase();
+            const cls = sl.includes('publ') ? 'published' : (sl.includes('prog') || sl.includes('sched') || sl.includes('program')) ? 'scheduled' : 'draft';
+            const sb = document.createElement('div');
+            sb.className = 'ig-status-badge ig-status-' + cls;
+            sb.textContent = m.status;
+            div.appendChild(sb);
+          }
+          if (m.caption) {
+            const cap = document.createElement('div');
+            cap.className = 'ig-caption';
+            cap.textContent = m.caption.slice(0, 90) + (m.caption.length > 90 ? '…' : '');
+            div.appendChild(cap);
+          }
+        }
+
+        const ov = document.createElement('div');
+        ov.className = 'ig-cell-overlay';
+
+        const starSpan = document.createElement('span');
+        starSpan.title = newFlags[i] ? 'Quitar de cola' : 'Agregar a cola';
+        starSpan.innerHTML = newFlags[i]
+          ? '<i class="ti ti-star-filled" style="color:#f5c518"></i>'
+          : '<i class="ti ti-star"></i>';
+        starSpan.onclick = e => { e.stopPropagation(); newFlags[i] = !newFlags[i]; render(); renderQueue(); };
+
+        const delSpan = document.createElement('span');
+        delSpan.title = 'Eliminar';
+        delSpan.innerHTML = '<i class="ti ti-trash"></i>';
+        delSpan.onclick = e => { e.stopPropagation(); cells[i] = null; meta[i] = null; newFlags[i] = false; render(); renderQueue(); };
+
+        ov.appendChild(starSpan);
+        ov.appendChild(delSpan);
+        div.appendChild(ov);
+      } else {
+        div.innerHTML = '<i class="ti ti-photo"></i>';
+        div.onclick = () => document.getElementById('fileInput').click();
+      }
+
+      div.addEventListener('dragstart', e => { dragSrc = i; div.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+      div.addEventListener('dragend', () => { div.classList.remove('dragging'); document.querySelectorAll('.ig-cell').forEach(c => c.classList.remove('drag-over')); });
+      div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
+      div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+      div.addEventListener('drop', e => {
+        e.preventDefault();
+        div.classList.remove('drag-over');
+        if (dragSrc !== null && dragSrc !== i) {
+          [cells[dragSrc], cells[i]] = [cells[i], cells[dragSrc]];
+          [meta[dragSrc], meta[i]]   = [meta[i], meta[dragSrc]];
+          [newFlags[dragSrc], newFlags[i]] = [newFlags[i], newFlags[dragSrc]];
+          dragSrc = null;
+          render(); renderQueue();
+        }
+      });
+
+      grid.appendChild(div);
+    });
+  }
+
+  /* ─── Render queue ───────────────────────────────────────────────────── */
+  function renderQueue() {
+    const q = document.getElementById('igQueue');
+    const items = cells.map((s, i) => ({ s, i })).filter(x => x.s && newFlags[x.i]);
+    if (!items.length) {
+      q.innerHTML = '<span class="ig-queue-empty">Marcá una foto con ★ para verla acá</span>';
+      return;
+    }
+    q.innerHTML = '';
+    items.forEach(({ s, i }) => {
+      const d = document.createElement('div');
+      d.className = 'ig-queue-item';
+      const img = document.createElement('img');
+      img.src = s; img.alt = 'próxima publicación';
+      d.appendChild(img);
+      q.appendChild(d);
+    });
+  }
+
+  /* ─── File handling ──────────────────────────────────────────────────── */
+  function handleFiles(files) {
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const idx = cells.findIndex(c => !c);
+        if (idx !== -1) { cells[idx] = e.target.result; render(); }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  }
+
+  function addFromUrl() {
+    const val = document.getElementById('urlInput').value.trim();
+    if (!val) return;
+    const idx = cells.findIndex(c => !c);
+    if (idx !== -1) { cells[idx] = val; render(); document.getElementById('urlInput').value = ''; }
+  }
+
+  function addRow() {
+    cells    = cells.concat(Array(3).fill(null));
+    meta     = meta.concat([null, null, null]);
+    newFlags = newFlags.concat([false, false, false]);
+    render();
+  }
+
+  function clearAll() {
+    cells = Array(12).fill(null);
+    meta  = Array(12).fill(null);
+    newFlags = Array(12).fill(false);
+    render(); renderQueue();
+  }
+
+  /* ─── Notion ─────────────────────────────────────────────────────────── */
+  function clearNotionStatus() {
+    const s = document.getElementById('notionStatus');
+    s.className = 'notion-status';
+    s.innerHTML = '<i class="ti ti-database-off"></i> Sin conectar';
+  }
+
+  function setNotionStatus(ok, msg) {
+    const s = document.getElementById('notionStatus');
+    s.className = 'notion-status ' + (ok ? 'ok' : 'err');
+    s.innerHTML = (ok
+      ? '<i class="ti ti-circle-check"></i> '
+      : '<i class="ti ti-alert-circle"></i> ') + msg;
+  }
+
+  function saveCredentials() {
+    const data = {
+      token: document.getElementById('notionToken').value,
+      dbId:  document.getElementById('notionDbId').value,
+      fImg:  document.getElementById('fldImage').value,
+      fCap:  document.getElementById('fldCaption').value,
+      fStat: document.getElementById('fldStatus').value,
+      fDate: document.getElementById('fldDate').value,
+    };
+    localStorage.setItem('ig_credentials', JSON.stringify(data));
+    setNotionStatus(true, 'Credenciales guardadas en este navegador');
+  }
+
+  async function loadFromNotion() {
+    if (PROXY_URL === 'TU_CLOUDFLARE_WORKER_URL_AQUI') {
+      setNotionStatus(false, 'Primero configurá el PROXY_URL en el archivo HTML');
+      return;
+    }
+    const token = document.getElementById('notionToken').value.trim();
+    const dbId  = document.getElementById('notionDbId').value.trim().replace(/-/g, '');
+    const fImg  = document.getElementById('fldImage').value.trim()   || 'Imagen';
+    const fCap  = document.getElementById('fldCaption').value.trim() || 'Caption';
+    const fStat = document.getElementById('fldStatus').value.trim()  || 'Estado';
+    const fDate = document.getElementById('fldDate').value.trim()    || 'Fecha';
+
+    if (!token || !dbId) {
+      setNotionStatus(false, 'Completá el token y el Database ID');
+      return;
+    }
+
+    setNotionStatus(true, 'Conectando...');
+
+    try {
+      const res = await fetch(PROXY_URL + '/v1/databases/' + dbId + '/query', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          page_size: 18,
+          sorts: [{ property: fDate, direction: 'ascending' }]
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setNotionStatus(false, err.message || 'Error ' + res.status);
+        return;
+      }
+
+      const data = await res.json();
+      const results = data.results || [];
+
+      const total = Math.max(12, Math.ceil(results.length / 3) * 3);
+      cells    = Array(total).fill(null);
+      meta     = Array(total).fill(null);
+      newFlags = Array(total).fill(false);
+
+      results.forEach((page, i) => {
+        const props = page.properties;
+
+        // Image
+        let imgUrl = '';
+        const imgProp = props[fImg];
+        if (imgProp) {
+          if (imgProp.type === 'files' && imgProp.files?.length) {
+            const f = imgProp.files[0];
+            imgUrl = f.type === 'external' ? f.external?.url : f.file?.url || '';
+          } else if (imgProp.type === 'url')       imgUrl = imgProp.url || '';
+          else if (imgProp.type === 'rich_text')   imgUrl = imgProp.rich_text?.[0]?.plain_text || '';
+        }
+        if (!imgUrl && page.cover) {
+          imgUrl = page.cover.type === 'external' ? page.cover.external?.url : page.cover.file?.url || '';
+        }
+
+        // Caption
+        let caption = '';
+        const capProp = props[fCap];
+        if (capProp) {
+          if (capProp.type === 'title')      caption = capProp.title?.[0]?.plain_text || '';
+          else if (capProp.type === 'rich_text') caption = capProp.rich_text?.[0]?.plain_text || '';
+        }
+
+        // Status
+        let status = '';
+        const statProp = props[fStat];
+        if (statProp) {
+          if (statProp.type === 'select')    status = statProp.select?.name || '';
+          else if (statProp.type === 'status') status = statProp.status?.name || '';
+          else if (statProp.type === 'rich_text') status = statProp.rich_text?.[0]?.plain_text || '';
+        }
+
+        cells[i] = imgUrl || null;
+        meta[i]  = { caption, status };
+
+        const sl = status.toLowerCase();
+        if (sl.includes('nueva') || sl.includes('next') || sl.includes('program') || sl.includes('sched')) {
+          newFlags[i] = true;
+        }
+      });
+
+      render();
+      renderQueue();
+      setNotionStatus(true, results.length + ' publicaciones cargadas');
+
+      // Switch to grid tab
+      switchTab('grid', document.querySelectorAll('.ig-tab')[0]);
+      document.querySelectorAll('.ig-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.ig-tab')[0].classList.add('active');
+
+    } catch (e) {
+      setNotionStatus(false, 'Error de red: ' + (e.message || 'revisá la URL del proxy'));
+    }
+  }
+</script>
+</body>
+</html>
